@@ -1,0 +1,94 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error
+
+# Load the dataset
+data = pd.read_csv('House Price India.csv')
+
+# Display the available columns in the dataset
+print("Columns in the dataset:")
+print(data.columns)
+
+# User input for feature and target columns
+input_features = input("Provide feature columns separated by a comma (e.g., 'No of bedrooms, No of bathrooms'): ").strip()
+output_target = input("Provide the target column (e.g., 'Price'): ").strip()
+
+# Clean the input column names
+selected_features = [x.strip().replace("'", "").replace('"', '') for x in input_features.split(',')]
+target_variable = output_target.strip().replace("'", "").replace('"', '')
+
+# Check if the columns exist in the data
+missing_features = [col for col in selected_features if col not in data.columns]
+missing_target = target_variable if target_variable not in data.columns else None
+
+if missing_features:
+    print(f"Error: These feature columns are not found in the dataset: {missing_features}")
+if missing_target:
+    print(f"Error: The target column '{target_variable}' is not found in the dataset")
+
+if missing_features or missing_target:
+    raise ValueError("Please recheck the column names.")
+
+# Handle missing values by replacing with column means
+data.fillna(data.mean(), inplace=True)
+
+# Extract features and target from the dataset
+X = data[selected_features]
+y = data[target_variable]
+
+# Scale the feature set
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Split the data into training and test sets
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+# Initialize and train the regression model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Predict the test set results
+y_pred = model.predict(X_test)
+
+# Calculate the Mean Squared Error
+mse = mean_squared_error(y_test, y_pred)
+print(f"Mean Squared Error of the Model: {mse}")
+
+# Conversion rates for various currencies (example rates)
+exchange_rates = {
+    'USD': 1.0,
+    'EUR': 0.85,
+    'GBP': 0.75,
+    'INR': 74.0,
+    'JPY': 110.0,
+}
+
+# Let the user choose a currency
+print("\nAvailable currencies: USD (USA), EUR (Eurozone), GBP (UK), INR (India), JPY (Japan)")
+currency_code = input("Enter the currency code (e.g., 'USD', 'EUR'): ").strip().upper()
+
+# Validate the chosen currency
+if currency_code not in exchange_rates:
+    raise ValueError(f"The currency '{currency_code}' is not supported.")
+
+# Input new house features for price prediction
+print("\nProvide the details of the new house:")
+new_house = []
+for feature in selected_features:
+    val = float(input(f"Enter value for {feature}: "))
+    new_house.append(val)
+
+# Convert the new house features into an array and scale them
+new_house_arr = np.array([new_house])
+new_house_scaled = scaler.transform(new_house_arr)
+
+# Predict the price in USD
+predicted_price_usd = model.predict(new_house_scaled)
+
+# Convert the price to the selected currency
+predicted_price_in_currency = predicted_price_usd[0] * exchange_rates[currency_code]
+
+print(f"\nPredicted Price for the New House: {predicted_price_in_currency:.2f} {currency_code}")
