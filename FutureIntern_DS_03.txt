@@ -1,0 +1,75 @@
+# Required libraries for data manipulation, modeling, and metrics
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, classification_report
+from imblearn.over_sampling import SMOTE
+
+# Load and explore the dataset
+dataset_path = 'creditcard.csv'  # Modify this path according to your file location
+credit_data = pd.read_csv(dataset_path)
+
+# Preview the first few rows and check dataset information
+print("Initial Dataset Overview:")
+print(credit_data.head(), "\n")
+print("Data Information:")
+print(credit_data.info(), "\n")
+
+# Analyze the class distribution to understand imbalance
+class_counts = credit_data['Class'].value_counts()
+print(f"Target class distribution:\n{class_counts}\n")
+
+# Separating predictors (independent variables) and target (dependent variable)
+predictors = credit_data.drop(['Class'], axis=1)  # Removing target column for predictors
+target = credit_data['Class']  # Target: Fraud or Non-fraud
+
+# Splitting the data into training and testing sets with a 80:20 ratio
+train_X, test_X, train_y, test_y = train_test_split(predictors, target, test_size=0.2, random_state=42, stratify=target)
+
+# Data normalization for better model performance
+normalizer = StandardScaler()
+scaled_train_X = normalizer.fit_transform(train_X)
+scaled_test_X = normalizer.transform(test_X)
+
+# Addressing data imbalance using SMOTE (over-sampling the minority class)
+oversample = SMOTE(random_state=42)
+balanced_train_X, balanced_train_y = oversample.fit_resample(scaled_train_X, train_y)
+
+# Verifying the class balance after SMOTE
+balanced_class_counts = pd.Series(balanced_train_y).value_counts()
+print(f"Class distribution after applying SMOTE:\n{balanced_class_counts}\n")
+
+# Build and train a Random Forest model
+forest_classifier = RandomForestClassifier(n_estimators=100, random_state=42)
+forest_classifier.fit(balanced_train_X, balanced_train_y)
+
+# Build and train an alternative Logistic Regression model
+logistic_classifier = LogisticRegression(random_state=42)
+logistic_classifier.fit(balanced_train_X, balanced_train_y)
+
+# Predicting using the Random Forest model
+rf_predictions = forest_classifier.predict(scaled_test_X)
+
+# Evaluating Random Forest model performance
+print("----- Random Forest Model Performance -----")
+print(f"Accuracy: {accuracy_score(test_y, rf_predictions):.4f}")
+print(f"Precision: {precision_score(test_y, rf_predictions):.4f}")
+print(f"Recall: {recall_score(test_y, rf_predictions):.4f}")
+print(f"F1 Score: {f1_score(test_y, rf_predictions):.4f}")
+print("Confusion Matrix:\n", confusion_matrix(test_y, rf_predictions))
+print("Classification Report:\n", classification_report(test_y, rf_predictions))
+
+# Predicting using the Logistic Regression model
+lr_predictions = logistic_classifier.predict(scaled_test_X)
+
+# Evaluating Logistic Regression model performance
+print("\n----- Logistic Regression Model Performance -----")
+print(f"Accuracy: {accuracy_score(test_y, lr_predictions):.4f}")
+print(f"Precision: {precision_score(test_y, lr_predictions):.4f}")
+print(f"Recall: {recall_score(test_y, lr_predictions):.4f}")
+print(f"F1 Score: {f1_score(test_y, lr_predictions):.4f}")
+print("Confusion Matrix:\n", confusion_matrix(test_y, lr_predictions))
+print("Classification Report:\n", classification_report(test_y, lr_predictions))
